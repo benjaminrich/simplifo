@@ -1,0 +1,19 @@
+Package: simplifo
+Type: Package
+Version: 0.1
+Date: 2024-03-18
+Title: Simplify the Creation of Forest Plots
+Authors@R: person("Benjamin", "Rich", role=c("aut", "cre"), email="mail@benjaminrich.net")
+URL: https://github.com/benjaminrich/simplifo
+BugReports: https://github.com/benjaminrich/simplifo/issues
+Description: Create forest plots to visualize covariate effects, with emphasis on pharmacometric applications.
+License: GPL-3
+Depends: R (>= 3.5.0)
+Imports: data.table,ggplot2,egg
+Suggests: knitr,rmarkdown,linpk,table1,mvtnorm,mappings
+VignetteBuilder: knitr
+Language: en-US
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
