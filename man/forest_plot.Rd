@@ -2,29 +2,43 @@
 % Please edit documentation in R/forest_plot.R
 \name{forest_plot}
 \alias{forest_plot}
+\alias{forest_plot_main}
+\alias{forest_plot_table}
 \title{Forest plot}
 \usage{
 forest_plot(
   fodat,
-  scale = c("relative", "absolute"),
   lab = NULL,
   lim = NULL,
+  scale = c("relative", "absolute"),
   refline = if (scale == "relative") 1 else NULL,
   refrange = if (scale == "relative") c(0.8, 1.25) else NULL,
   logscale = FALSE,
   widths = c(0.7, 0.3)
 )
+
+forest_plot_main(
+  fodat,
+  lab = NULL,
+  lim = lim,
+  scale = c("relative", "absolute"),
+  refline = NULL,
+  refrange = NULL,
+  logscale = FALSE
+)
+
+forest_plot_table(fodat, scale = c("relative", "absolute"))
 }
 \arguments{
 \item{fodat}{A \code{data.frame} in the format produced by \code{\link[=prepare_forest_data]{prepare_forest_data()}}.}
 
-\item{scale}{Can be either "relative" or "absolute". Relative scale means
-that values will be normalized by their reference value, while absolute
-scale means values remain unchanged.}
-
 \item{lab}{Label for the x-axis.}
 
 \item{lim}{Limits for the x-axis.}
+
+\item{scale}{Can be either "relative" or "absolute". Relative scale means
+that values will be normalized by their reference value, while absolute
+scale means values remain unchanged.}
 
 \item{refline}{Value of reference line.}
 
@@ -37,10 +51,17 @@ the main plot and the table containing the numeric values. By default, the
 split is 70:30 for the main plot and the table.}
 }
 \value{
-A \code{gtable} (see \code{\link[egg:ggarrange]{egg::ggarrange()}}).
+An object of class \code{forest_plot}. This is a list of 2 components,
+\code{main_plot} and \code{table_plot}, which are both \code{ggplot} objects. It can be
+plotted and printed (with the same result).
 }
 \description{
-Forest plot
+Create a forest plot from prepared data.
+}
+\details{
+\code{forest_plot_main()} returns just the main plot, and
+\code{forest_plot_table()} returns just the table portion of the plot. Sometimes
+it can be useful to have these separately.
 }
 \examples{
 fodat <- sample_forest_data

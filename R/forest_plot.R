@@ -4,19 +4,27 @@ NULL
 
 #' Forest plot
 #'
+#' Create a forest plot from prepared data.
+#'
+#' @details `forest_plot_main()` returns just the main plot, and
+#' `forest_plot_table()` returns just the table portion of the plot. Sometimes
+#' it can be useful to have these separately.
+#'
 #' @param fodat A `data.frame` in the format produced by [prepare_forest_data()].
+#' @param lab Label for the x-axis.
+#' @param lim Limits for the x-axis.
 #' @param scale Can be either "relative" or "absolute". Relative scale means
 #' that values will be normalized by their reference value, while absolute
 #' scale means values remain unchanged.
-#' @param lab Label for the x-axis.
-#' @param lim Limits for the x-axis.
 #' @param refline Value of reference line.
 #' @param refrange Limits for the reference range.
 #' @param logscale Use log-scale for the x-axis?
 #' @param widths A numeric vector of length 2 specifying the relative widths of
 #' the main plot and the table containing the numeric values. By default, the
 #' split is 70:30 for the main plot and the table.
-#' @return A `gtable` (see [egg::ggarrange()]).
+#' @return An object of class `forest_plot`. This is a list of 2 components,
+#' `main_plot` and `table_plot`, which are both `ggplot` objects. It can be
+#' plotted and printed (with the same result).
 #' @seealso [prepare_forest_data()].
 #' @examples
 #' fodat <- sample_forest_data
@@ -52,35 +60,52 @@ NULL
 #' @export
 forest_plot <- function(
     fodat,
-    scale=c("relative", "absolute"),
-    lab=NULL,
-    lim=NULL,
-    refline=if (scale=="relative") 1.0  else NULL,
-    refrange=if (scale=="relative") c(0.8, 1.25) else NULL,
-    logscale=FALSE,
-    widths=c(0.7, 0.3))
+    lab      = NULL,
+    lim      = NULL,
+    scale    = c("relative", "absolute"),
+    refline  = if (scale=="relative") 1.0  else NULL,
+    refrange = if (scale=="relative") c(0.8, 1.25) else NULL,
+    logscale = FALSE,
+    widths   = c(0.7, 0.3))
 {
     scale <- match.arg(scale)
 
-    if (scale == "relative") {
-        #fodat <- copy(fodat)
-        fodat$md <- fodat$md/fodat$refval
-        fodat$lo <- fodat$lo/fodat$refval
-        fodat$hi <- fodat$hi/fodat$refval
-    }
+    main_plot  <- forest_plot_main(fodat=fodat, lab=lab, lim=lim,
+        refline=refline, refrange=refrange, logscale=logscale)
 
-    main_plot  <- forest_plot_main(fodat=fodat, lab=lab, lim=lim, refline=refline, refrange=refrange, logscale=logscale)
     table_plot <- forest_plot_table(fodat=fodat)
 
-    egg::ggarrange(main_plot, table_plot, nrow=1, widths=widths)
+    structure(
+        list(
+            main_plot  = main_plot,
+            table_plot = table_plot
+        ),
+        class  = "forest_plot",
+        widths = widths
+    )
 }
 
-forest_plot_main <- function(fodat, lab=NULL, lim=lim, refline=NULL, refrange=NULL, logscale=FALSE) {
+#' @export
+plot.forest_plot <- function(x, ...) {
+    egg::ggarrange(x$main_plot, x$table_plot, nrow=1, widths=attr(x, "widths"))
+}
 
-    md <- lo <- hi <- covar <- covval <- ymin <- ymax <- x <- NULL
+#' @export
+print.forest_plot <- function(x, ...) {
+    plot.forest_plot(x, ...)
+}
+
+#' @rdname forest_plot
+#' @export
+forest_plot_main <- function(fodat, lab=NULL, lim=lim, scale=c("relative", "absolute"), refline=NULL, refrange=NULL, logscale=FALSE) {
+
+    scale <- match.arg(scale)
+
+    est <- md <- lo <- hi <- covar <- covval <- ymin <- ymax <- x <- NULL
+
 
     main_plot <-
-        ggplot2::ggplot(fodat, ggplot2::aes(x=md, y=covval)) +
+        ggplot2::ggplot(fodat, ggplot2::aes(y=covval)) +
         ggplot2::labs(x=lab, y=NULL) +
         ggplot2::facet_grid(covar ~ ., scales="free", space="free", switch="y") +
         ggplot2::scale_y_discrete(expand=ggplot2::expansion(add=1), limits=rev)
@@ -107,14 +132,19 @@ forest_plot_main <- function(fodat, lab=NULL, lim=lim, refline=NULL, refrange=NU
             ggplot2::scale_x_continuous(breaks=seq(0, max(lim), 0.2))
     }
 
+    if (scale == "relative") {
+        main_plot <- main_plot +
+            ggplot2::geom_pointrange(ggplot2::aes(x=est/refval, xmin=lo/refval, xmax=hi/refval), color="#3A70B6") +
+            ggplot2::geom_point(ggplot2::aes(x=est/refval), color="#3A70B6", size=3)
+    } else {
+        main_plot <- main_plot +
+            ggplot2::geom_pointrange(ggplot2::aes(x=est, xmin=lo, xmax=hi), color="#3A70B6") +
+            ggplot2::geom_point(ggplot2::aes(x=est), color="#3A70B6", size=3)
+    }
 
     main_plot <- main_plot +
-        ggplot2::geom_pointrange(ggplot2::aes(xmin=lo, xmax=hi), color="#3A70B6") +
-        ggplot2::geom_point(color="#3A70B6")
-
-    main_plot <- main_plot +
-        #theme_minimal() +
-        ggplot2::theme_bw() +
+        theme_minimal() +
+        #ggplot2::theme_bw() +
         ggplot2::theme(
             panel.spacing=ggplot2::unit(0, "cm"),
             panel.grid=ggplot2::element_blank(),
@@ -140,9 +170,13 @@ forest_plot_main <- function(fodat, lab=NULL, lim=lim, refline=NULL, refrange=NU
     main_plot
 }
 
-forest_plot_table <- function(fodat) {
+#' @rdname forest_plot
+#' @export
+forest_plot_table <- function(fodat, scale=c("relative", "absolute")) {
 
-    md <- lo <- hi <- covar <- covval <- NULL
+    scale <- match.arg(scale)
+
+    est <- md <- lo <- hi <- covar <- covval <- NULL
 
     format_number <- function(x, digits=2) {
         is.inf <- function(x) { x == Inf }
@@ -160,8 +194,17 @@ forest_plot_table <- function(fodat) {
     table_plot <-
         ggplot2::ggplot(fodat, ggplot2::aes(x=1, y=covval)) +
         ggplot2::labs(x=NULL, y=NULL, title="Estimate [95% CI]") +
-        ggplot2::facet_grid(covar ~ ., scales="free", space="free", switch="y") +
-        ggplot2::geom_text(ggplot2::aes(label=format_est_ci(md, lo, hi))) +
+        ggplot2::facet_grid(covar ~ ., scales="free", space="free", switch="y")
+
+    if (scale == "relative") {
+        table_plot <- table_plot +
+            ggplot2::geom_text(ggplot2::aes(label=format_est_ci(est/refval, lo/refval, hi/refval)))
+    } else {
+        table_plot <- table_plot +
+            ggplot2::geom_text(ggplot2::aes(label=format_est_ci(est, lo, hi)))
+    }
+
+    table_plot <- table_plot +
         ggplot2::scale_y_discrete(expand=ggplot2::expansion(add=1), limits=rev) +
         ggplot2::theme_void() +
         ggplot2::theme(
