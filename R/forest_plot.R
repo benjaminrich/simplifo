@@ -43,17 +43,14 @@ NULL
 #'         cl   = "CL",
 #'         vc   = "Vc"))
 #' 
-#' my_forest_plot <- function(.param, .covar=c("sex", "wt", "crcl")) {
-#'   fodatplot <- data.table::setDT(fodat)[(param == .param) & (covar %in% .covar)]
-#'   fodatplot[, covar := covar.labels(covar)]
-#'   lab <- param.labels(unique(fodatplot$param))
-#'   lab <- parse(text=paste("`Fold Change in`", lab, "`Relative to Reference`", sep="~"))
-#'   forest_plot(fodatplot, scale="relative", lab=lab, logscale=TRUE)
+#' my_forest_plot <- function(param, covars=NULL) {
+#'   lab <- parse(text=paste("`Fold Change in`", param.labels(param), "`Relative to Reference`", sep="~"))
+#'   forest_plot(fodat, param=param, covars=covars, scale="relative", lab=lab, logscale=TRUE)
 #' }
 #' 
 #' my_forest_plot("cl")
 #' 
-#' my_forest_plot("vc", "wt")
+#' my_forest_plot("vc", covar.labels("wt"))
 #' 
 #' my_forest_plot("cmax")
 #' 
@@ -68,7 +65,7 @@ forest_plot <- function(
     lim      = NULL,
     scale    = c("relative", "absolute"),
     refline  = if (scale=="relative") 1.0  else NULL,
-    refrange = if (scale=="relative") c(0.8, 1.25) else NULL,
+    refrange = if (scale=="relative" && isTRUE(logscale)) c(0.8, 1.25) else if (scale=="relative") c(0.8, 1.2) else NULL,
     logscale = FALSE,
     widths   = c(0.7, 0.3))
 {
@@ -132,27 +129,29 @@ forest_plot_main <- function(fodat, lab=NULL, lim=lim, scale=c("relative", "abso
     est <- md <- lo <- hi <- covar <- covval <- ymin <- ymax <- x <- NULL
 
 
-    yax <- unique(fodat[, .(breaks=mappings::cf(covar, covval), labels=covval)])
+    yax <- unique(fodat[, .(breaks=mappings::cf(covar, covval, sep="|||"), labels=covval)])
 
 
     main_plot <-
-        ggplot2::ggplot(fodat, ggplot2::aes(y=mappings::cf(covar, covval))) +
+        ggplot2::ggplot(fodat, ggplot2::aes(y=mappings::cf(covar, covval, sep="|||"))) +
         ggplot2::labs(x=lab, y=NULL) +
         ggplot2::facet_grid(covar ~ ., scales="free", space="free", switch="y") +
         ggplot2::scale_y_discrete(expand=ggplot2::expansion(add=1), breaks=yax$breaks, labels=yax$labels, limits=rev)
 
     if (!is.null(refrange)) {
         main_plot <- main_plot +
-            ggplot2::geom_ribbon(data=data.frame(x=refrange, ymin= -Inf, ymax=Inf),
-                ggplot2::aes(x=x, y=NA, ymin=ymin, ymax=ymax), color=NA, fill="gray90")
-            #geom_rect(xmin=min(refrange), xmax=max(refrange), ymin= -Inf, ymax=Inf, color=NA, fill="gray90")
+            #ggplot2::geom_ribbon(data=data.frame(x=refrange, ymin= -Inf, ymax=Inf),
+            #    ggplot2::aes(x=x, y=NA, ymin=ymin, ymax=ymax), color=NA, fill="gray90")
+            geom_rect(
+                data=data.frame(xmin=min(refrange), xmax=max(refrange)),
+                aes(xmin=xmin, xmax=xmax, y=NULL),
+                ymin= -Inf, ymax=Inf, color=NA, fill="gray90")
     }
 
     if (!is.null(refline)) {
         main_plot <- main_plot +
             ggplot2::geom_vline(xintercept=refline, color="gray40", linetype="dotted")
     }
-
 
     if (logscale) {
         main_plot <- main_plot +
@@ -221,10 +220,10 @@ forest_plot_table <- function(fodat, scale=c("relative", "absolute")) {
             format_number(x), format_number(xmin), format_number(xmax))
     }
 
-    yax <- unique(fodat[, .(breaks=mappings::cf(covar, covval), labels=covval)])
+    yax <- unique(fodat[, .(breaks=mappings::cf(covar, covval, sep="|||"), labels=covval)])
 
     table_plot <-
-        ggplot2::ggplot(fodat, ggplot2::aes(x=1, y=mappings::cf(covar, covval))) +
+        ggplot2::ggplot(fodat, ggplot2::aes(x=1, y=mappings::cf(covar, covval, sep="|||"))) +
         ggplot2::labs(x=NULL, y=NULL, title="Estimate [95% CI]") +
         ggplot2::facet_grid(covar ~ ., scales="free", space="free", switch="y") +
         ggplot2::scale_y_discrete(expand=ggplot2::expansion(add=1), breaks=yax$breaks, labels=yax$labels, limits=rev)

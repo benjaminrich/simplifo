@@ -14,7 +14,8 @@ forest_plot(
   lim = NULL,
   scale = c("relative", "absolute"),
   refline = if (scale == "relative") 1 else NULL,
-  refrange = if (scale == "relative") c(0.8, 1.25) else NULL,
+  refrange = if (scale == "relative" && isTRUE(logscale)) c(0.8, 1.25) else if (scale ==
+    "relative") c(0.8, 1.2) else NULL,
   logscale = FALSE,
   widths = c(0.7, 0.3)
 )
@@ -84,17 +85,14 @@ param.labels = mappings::mapping(c(
         cl   = "CL",
         vc   = "Vc"))
 
-my_forest_plot <- function(.param, .covar=c("sex", "wt", "crcl")) {
-  fodatplot <- data.table::setDT(fodat)[(param == .param) & (covar \%in\% .covar)]
-  fodatplot[, covar := covar.labels(covar)]
-  lab <- param.labels(unique(fodatplot$param))
-  lab <- parse(text=paste("`Fold Change in`", lab, "`Relative to Reference`", sep="~"))
-  forest_plot(fodatplot, scale="relative", lab=lab, logscale=TRUE)
+my_forest_plot <- function(param, covars=NULL) {
+  lab <- parse(text=paste("`Fold Change in`", param.labels(param), "`Relative to Reference`", sep="~"))
+  forest_plot(fodat, param=param, covars=covars, scale="relative", lab=lab, logscale=TRUE)
 }
 
 my_forest_plot("cl")
 
-my_forest_plot("vc", "wt")
+my_forest_plot("vc", covar.labels("wt"))
 
 my_forest_plot("cmax")
 
