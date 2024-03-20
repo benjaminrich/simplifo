@@ -11,6 +11,8 @@ NULL
 #' it can be useful to have these separately.
 #'
 #' @param fodat A `data.frame` in the format produced by [prepare_forest_data()].
+#' @param param The parameter to plot.
+#' @param covars The covariates to plot.
 #' @param lab Label for the x-axis.
 #' @param lim Limits for the x-axis.
 #' @param scale Can be either "relative" or "absolute". Relative scale means
@@ -60,6 +62,8 @@ NULL
 #' @export
 forest_plot <- function(
     fodat,
+    param    = unique(fodat$param)[1],
+    covars   = NULL,
     lab      = NULL,
     lim      = NULL,
     scale    = c("relative", "absolute"),
@@ -70,10 +74,34 @@ forest_plot <- function(
 {
     scale <- match.arg(scale)
 
-    main_plot  <- forest_plot_main(fodat=fodat, lab=lab, lim=lim,
+    fodat1 <- data.table::as.data.table(fodat)
+
+    # Keep only 1 parameter
+    .param <- param
+    fodat1 <- fodat1[param == .param]
+
+    # Keep only specific covariates
+    if (is.null(covars)) {
+        # Only covariates that have more than 1 value by default
+        covars <- table(fodat1$covar)
+        covars <- covars[covars > 1]
+        covars <- names(covars)
+    }
+    fodat1 <- fodat1[covar %in% covars]
+
+    fodat1 <- droplevels(fodat1)
+
+    if (is.null(lab)) {
+        lab <- unique(fodat1$param)
+        if (scale == "relative") {
+            lab <- parse(text=paste("`Fold Change in`", lab, "`Relative to Reference`", sep="~"))
+        }
+    }
+
+    main_plot  <- forest_plot_main(fodat=fodat1, lab=lab, lim=lim,
         refline=refline, refrange=refrange, logscale=logscale)
 
-    table_plot <- forest_plot_table(fodat=fodat)
+    table_plot <- forest_plot_table(fodat=fodat1)
 
     structure(
         list(
@@ -104,11 +132,14 @@ forest_plot_main <- function(fodat, lab=NULL, lim=lim, scale=c("relative", "abso
     est <- md <- lo <- hi <- covar <- covval <- ymin <- ymax <- x <- NULL
 
 
+    yax <- unique(fodat[, .(breaks=mappings::cf(covar, covval), labels=covval)])
+
+
     main_plot <-
-        ggplot2::ggplot(fodat, ggplot2::aes(y=covval)) +
+        ggplot2::ggplot(fodat, ggplot2::aes(y=mappings::cf(covar, covval))) +
         ggplot2::labs(x=lab, y=NULL) +
         ggplot2::facet_grid(covar ~ ., scales="free", space="free", switch="y") +
-        ggplot2::scale_y_discrete(expand=ggplot2::expansion(add=1), limits=rev)
+        ggplot2::scale_y_discrete(expand=ggplot2::expansion(add=1), breaks=yax$breaks, labels=yax$labels, limits=rev)
 
     if (!is.null(refrange)) {
         main_plot <- main_plot +
@@ -185,16 +216,18 @@ forest_plot_table <- function(fodat, scale=c("relative", "absolute")) {
         x2[is.inf(x)] <- "\U{221E}"
         x2
     }
-
     format_est_ci <- function(x, xmin, xmax) {
         sprintf("%s [%s, %s]",
             format_number(x), format_number(xmin), format_number(xmax))
     }
 
+    yax <- unique(fodat[, .(breaks=mappings::cf(covar, covval), labels=covval)])
+
     table_plot <-
-        ggplot2::ggplot(fodat, ggplot2::aes(x=1, y=covval)) +
+        ggplot2::ggplot(fodat, ggplot2::aes(x=1, y=mappings::cf(covar, covval))) +
         ggplot2::labs(x=NULL, y=NULL, title="Estimate [95% CI]") +
-        ggplot2::facet_grid(covar ~ ., scales="free", space="free", switch="y")
+        ggplot2::facet_grid(covar ~ ., scales="free", space="free", switch="y") +
+        ggplot2::scale_y_discrete(expand=ggplot2::expansion(add=1), breaks=yax$breaks, labels=yax$labels, limits=rev)
 
     if (scale == "relative") {
         table_plot <- table_plot +
@@ -205,7 +238,6 @@ forest_plot_table <- function(fodat, scale=c("relative", "absolute")) {
     }
 
     table_plot <- table_plot +
-        ggplot2::scale_y_discrete(expand=ggplot2::expansion(add=1), limits=rev) +
         ggplot2::theme_void() +
         ggplot2::theme(
             plot.title=ggplot2::element_text(size=ggplot2::rel(1), hjust=0.5),

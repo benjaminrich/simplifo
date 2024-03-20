@@ -8,6 +8,8 @@
 \usage{
 forest_plot(
   fodat,
+  param = unique(fodat$param)[1],
+  covars = NULL,
   lab = NULL,
   lim = NULL,
   scale = c("relative", "absolute"),
@@ -31,6 +33,10 @@ forest_plot_table(fodat, scale = c("relative", "absolute"))
 }
 \arguments{
 \item{fodat}{A \code{data.frame} in the format produced by \code{\link[=prepare_forest_data]{prepare_forest_data()}}.}
+
+\item{param}{The parameter to plot.}
+
+\item{covars}{The covariates to plot.}
 
 \item{lab}{Label for the x-axis.}
 
