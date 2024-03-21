@@ -92,7 +92,7 @@ my_forest_plot <- function(param, covars=NULL) {
 
 my_forest_plot("cl")
 
-my_forest_plot("vc", covar.labels("wt"))
+my_forest_plot("vc")
 
 my_forest_plot("cmax")
 

@@ -50,7 +50,7 @@ NULL
 #' 
 #' my_forest_plot("cl")
 #' 
-#' my_forest_plot("vc", covar.labels("wt"))
+#' my_forest_plot("vc")
 #' 
 #' my_forest_plot("cmax")
 #' 
@@ -80,9 +80,7 @@ forest_plot <- function(
     # Keep only specific covariates
     if (is.null(covars)) {
         # Only covariates that have more than 1 value by default
-        covars <- table(fodat1$covar)
-        covars <- covars[covars > 1]
-        covars <- names(covars)
+        covars <- fodat1[, by=covar, .(N=length(unique(est)))][N > 1, covar]
     }
     fodat1 <- fodat1[covar %in% covars]
 
