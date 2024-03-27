@@ -17,7 +17,8 @@ forest_plot(
   refrange = if (scale == "relative" && isTRUE(logscale)) c(0.8, 1.25) else if (scale ==
     "relative") c(0.8, 1.2) else NULL,
   logscale = FALSE,
-  widths = c(0.7, 0.3)
+  widths = c(0.7, 0.3),
+  styling = forest_plot_styling()
 )
 
 forest_plot_main(
@@ -27,10 +28,15 @@ forest_plot_main(
   scale = c("relative", "absolute"),
   refline = NULL,
   refrange = NULL,
-  logscale = FALSE
+  logscale = FALSE,
+  styling = forest_plot_styling()
 )
 
-forest_plot_table(fodat, scale = c("relative", "absolute"))
+forest_plot_table(
+  fodat,
+  scale = c("relative", "absolute"),
+  styling = forest_plot_styling()
+)
 }
 \arguments{
 \item{fodat}{A \code{data.frame} in the format produced by \code{\link[=prepare_forest_data]{prepare_forest_data()}}.}
@@ -56,6 +62,8 @@ scale means values remain unchanged.}
 \item{widths}{A numeric vector of length 2 specifying the relative widths of
 the main plot and the table containing the numeric values. By default, the
 split is 70:30 for the main plot and the table.}
+
+\item{styling}{A list of styling parameters. See \code{\link[=forest_plot_styling]{forest_plot_styling()}}.}
 }
 \value{
 An object of class \code{forest_plot}. This is a list of 2 components,

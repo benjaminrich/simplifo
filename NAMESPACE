@@ -2,8 +2,10 @@
 
 S3method(plot,forest_plot)
 S3method(print,forest_plot)
+S3method(print,forest_plot_styling)
 export(forest_plot)
 export(forest_plot_main)
+export(forest_plot_styling)
 export(forest_plot_table)
 export(prepare_forest_data)
 import(data.table)

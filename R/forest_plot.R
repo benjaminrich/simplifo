@@ -24,6 +24,7 @@ NULL
 #' @param widths A numeric vector of length 2 specifying the relative widths of
 #' the main plot and the table containing the numeric values. By default, the
 #' split is 70:30 for the main plot and the table.
+#' @param styling A list of styling parameters. See [forest_plot_styling()].
 #' @return An object of class `forest_plot`. This is a list of 2 components,
 #' `main_plot` and `table_plot`, which are both `ggplot` objects. It can be
 #' plotted and printed (with the same result).
@@ -67,8 +68,9 @@ forest_plot <- function(
     refline  = if (scale=="relative") 1.0  else NULL,
     refrange = if (scale=="relative" && isTRUE(logscale)) c(0.8, 1.25) else if (scale=="relative") c(0.8, 1.2) else NULL,
     logscale = FALSE,
-    widths   = c(0.7, 0.3))
-{
+    widths   = c(0.7, 0.3),
+    styling  = forest_plot_styling()
+) {
     scale <- match.arg(scale)
 
     fodat1 <- data.table::as.data.table(fodat)
@@ -94,9 +96,9 @@ forest_plot <- function(
     }
 
     main_plot  <- forest_plot_main(fodat=fodat1, lab=lab, lim=lim,
-        refline=refline, refrange=refrange, logscale=logscale)
+        refline=refline, refrange=refrange, logscale=logscale, styling=styling)
 
-    table_plot <- forest_plot_table(fodat=fodat1)
+    table_plot <- forest_plot_table(fodat=fodat1, styling=styling)
 
     structure(
         list(
@@ -120,7 +122,7 @@ print.forest_plot <- function(x, ...) {
 
 #' @rdname forest_plot
 #' @export
-forest_plot_main <- function(fodat, lab=NULL, lim=lim, scale=c("relative", "absolute"), refline=NULL, refrange=NULL, logscale=FALSE) {
+forest_plot_main <- function(fodat, lab=NULL, lim=lim, scale=c("relative", "absolute"), refline=NULL, refrange=NULL, logscale=FALSE, styling=forest_plot_styling()) {
 
     scale <- match.arg(scale)
 
@@ -143,12 +145,12 @@ forest_plot_main <- function(fodat, lab=NULL, lim=lim, scale=c("relative", "abso
             geom_rect(
                 data=data.frame(xmin=min(refrange), xmax=max(refrange)),
                 aes(xmin=xmin, xmax=xmax, y=NULL),
-                ymin= -Inf, ymax=Inf, color=NA, fill="gray90")
+                ymin= -Inf, ymax=Inf, color=styling$refrange.color, fill=styling$refrange.fill)
     }
 
     if (!is.null(refline)) {
         main_plot <- main_plot +
-            ggplot2::geom_vline(xintercept=refline, color="gray40", linetype="dotted")
+            ggplot2::geom_vline(xintercept=refline, color=styling$refline.color, linetype=styling$refline.linetype)
     }
 
     if (logscale) {
@@ -162,12 +164,12 @@ forest_plot_main <- function(fodat, lab=NULL, lim=lim, scale=c("relative", "abso
 
     if (scale == "relative") {
         main_plot <- main_plot +
-            ggplot2::geom_pointrange(ggplot2::aes(x=est/refval, xmin=lo/refval, xmax=hi/refval), color="#3A70B6") +
-            ggplot2::geom_point(ggplot2::aes(x=est/refval), color="#3A70B6", size=3)
+            ggplot2::geom_pointrange(ggplot2::aes(x=est/refval, xmin=lo/refval, xmax=hi/refval), color=styling$pointrange.color) +
+            ggplot2::geom_point(ggplot2::aes(x=est/refval), color=styling$point.color, size=3)
     } else {
         main_plot <- main_plot +
-            ggplot2::geom_pointrange(ggplot2::aes(x=est, xmin=lo, xmax=hi), color="#3A70B6") +
-            ggplot2::geom_point(ggplot2::aes(x=est), color="#3A70B6", size=3)
+            ggplot2::geom_pointrange(ggplot2::aes(x=est, xmin=lo, xmax=hi), color=styling$pointrange.color) +
+            ggplot2::geom_point(ggplot2::aes(x=est), color=styling$point.color, size=3)
     }
 
     main_plot <- main_plot +
@@ -200,7 +202,7 @@ forest_plot_main <- function(fodat, lab=NULL, lim=lim, scale=c("relative", "abso
 
 #' @rdname forest_plot
 #' @export
-forest_plot_table <- function(fodat, scale=c("relative", "absolute")) {
+forest_plot_table <- function(fodat, scale=c("relative", "absolute"), styling=forest_plot_styling()) {
 
     scale <- match.arg(scale)
 
